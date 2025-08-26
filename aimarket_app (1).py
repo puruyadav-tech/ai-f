@@ -561,160 +561,7 @@ def main():
         predict_button = st.button("🚀 Predict Stock Price", type="primary", use_container_width=True)
 
     # Main content area
-    if predict_button:
-        if not ticker:
-            st.error("Please enter a stock ticker symbol!")
-            return
-
-        # Create tabs for different views
-        tab1, tab2, tab3, tab4, tab5 = st.tabs([
-            "📊 Stock Analysis",
-            "🔮 Predictions",
-            "📈 Charts",
-            "🤖 Model Performance",
-            "📋 Data Table"
-        ])
-
-        # Fetch stock data
-        with st.spinner("🔄 Fetching stock data from multiple sources..."):
-            df = fetch_stock_data_unified(ticker, period=period)
-
-        if df is None:
-            st.error("❌ Unable to fetch data from any source. Please check the ticker symbol and try again.")
-            return
-
-        # Process the data
-        data_source = df.attrs.get('source', 'unknown')
-        df = process_stock_data(df, ticker, data_source)
-
-        if df is None or df.empty:
-            st.error("❌ Unable to process stock data. Please try again.")
-            return
-
-        # Display data source info
-        if data_source == 'sample_data':
-            st.warning("⚠️ Using sample data for demonstration. Real-time data unavailable.")
-        else:
-            st.success(f"✅ Successfully loaded {len(df)} data points for {ticker} from {data_source}")
-
-        # Get stock info
-        stock_info = get_stock_info(ticker)
-
-        with tab1:
-            # Stock information
-            st.markdown(f"### 📋 {stock_info['name']} ({ticker})")
-
-            # Data source indicator
-            if data_source != 'sample_data':
-                st.info(f"📡 Data Source: {data_source.title()}")
-
-            col1, col2, col3, col4 = st.columns(4)
-
-            with col1:
-                current_price = df['Close'].iloc[-1]
-                currency = stock_info.get('currency', 'USD')
-                currency_symbol = '$' if currency == 'USD' else 'INR ' if currency == 'INR' else currency
-                st.metric("Current Price", f"{currency_symbol}{current_price:.2f}")
-
-            with col2:
-                price_change = df['Close'].iloc[-1] - df['Close'].iloc[-2] if len(df) > 1 else 0
-                pct_change = (price_change / df['Close'].iloc[-2] * 100) if len(df) > 1 and df['Close'].iloc[-2] != 0 else 0
-                st.metric("Price Change", f"{currency_symbol}{price_change:.2f}", f"{pct_change:.2f}%")
-
-            with col3:
-                st.metric("Volume", f"{df['Volume'].iloc[-1]:,.0f}")
-
-            with col4:
-                volatility = df['Close'].pct_change().std() * 100
-                st.metric("Volatility", f"{volatility:.2f}%")
-
-            # Stock details
-            st.markdown("### 📊 Stock Details")
-            col1, col2 = st.columns(2)
-
-            with col1:
-                st.write(f"**Sector:** {stock_info['sector']}")
-                st.write(f"**Industry:** {stock_info['industry']}")
-
-            with col2:
-                st.write(f"**Market Cap:** {stock_info['market_cap']}")
-                st.write(f"**Currency:** {stock_info['currency']}")
-
-            # Key Statistics
-            st.markdown("### 📈 Key Statistics")
-            col1, col2, col3, col4 = st.columns(4)
-
-            with col1:
-                st.metric("52W High", f"{currency_symbol}{df['High'].max():.2f}")
-
-            with col2:
-                st.metric("52W Low", f"{currency_symbol}{df['Low'].min():.2f}")
-
-            with col3:
-                avg_volume = df['Volume'].mean()
-                st.metric("Avg Volume", f"{avg_volume:,.0f}")
-
-            with col4:
-                if 'RSI' in df.columns and not df['RSI'].isna().all():
-                    current_rsi = df['RSI'].iloc[-1]
-                    st.metric("RSI", f"{current_rsi:.1f}")
-
-        with tab2:
-            # Train model and make predictions
-            st.markdown("### 🤖 AI Predictions")
-
-            with st.spinner("🧠 Training ML model..."):
-                model, scaler, metrics, feature_importance = train_model(df)
-
-            if model is None:
-                st.error("Failed to train model. Please try with different parameters.")
-                return
-
-            # Display model performance
-            col1, col2, col3 = st.columns(3)
-
-            with col1:
-                st.metric("Model Accuracy (R²)", f"{metrics['test_r2']:.3f}")
-
-            with col2:
-                st.metric("RMSE", f"{metrics['test_rmse']:.2f}")
-
-            with col3:
-                st.metric("MAE", f"{metrics['test_mae']:.2f}")
-
-            # Single day prediction
-            st.markdown("### 🔮 Next Day Prediction")
-            next_day_pred = predict_next_price(model, scaler, df)
-
-            if next_day_pred:
-                current_price = df['Close'].iloc[-1]
-                price_change = next_day_pred - current_price
-                percentage_change = (price_change / current_price) * 100
-
-                col1, col2, col3 = st.columns(3)
-
-                with col1:
-                    st.metric("Current Price", f"{currency_symbol}{current_price:.2f}")
-
-                with col2:
-                    st.metric("Predicted Price", f"{currency_symbol}{next_day_pred:.2f}", f"{currency_symbol}{price_change:.2f}")
-
-                with col3:
-                    st.metric("Expected Change", f"{percentage_change:.2f}%")
-
-                # Prediction confidence
-                if percentage_change > 2:
-                    st.success("🟢 Strong Bullish Signal")
-                elif percentage_change > 0:
-                    st.info("🔵 Mild Bullish Signal")
-                elif percentage_change > -2:
-                    st.warning("🟡 Neutral Signal")
-                else:
-                    st.error("🔴 Bearish Signal")
-
-
-
-# Try to import plotting libraries
+    # Try to import plotting libraries
 try:
     import matplotlib.pyplot as plt
     import seaborn as sns
@@ -723,49 +570,156 @@ except ModuleNotFoundError:
     st.warning("Matplotlib or Seaborn is not installed. Plots will not be displayed.")
     PLOTTING_AVAILABLE = False
 
-# Tab 3: Stock Price Charts
-with tab3:
-    st.markdown("### 📈 Stock Price Charts")
+# Main content area
+if predict_button:
+    if not ticker:
+        st.error("Please enter a stock ticker symbol!")
+        return
 
-    if PLOTTING_AVAILABLE:
-        # Price chart with moving averages
-        fig, ax = plt.subplots(figsize=(10, 5))
-        ax.plot(df['Date'], df['Close'], label='Close Price', color='#1f77b4', linewidth=2)
+    # Create tabs for different views
+    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+        "📊 Stock Analysis",
+        "🔮 Predictions",
+        "📈 Charts",
+        "🤖 Model Performance",
+        "📋 Data Table"
+    ])
 
-        if 'MA_20' in df.columns and not df['MA_20'].isna().all():
-            ax.plot(df['Date'], df['MA_20'], label='20-Day MA', color='#ff7f0e', linestyle='--')
+    # Fetch stock data
+    with st.spinner("🔄 Fetching stock data from multiple sources..."):
+        df = fetch_stock_data_unified(ticker, period=period)
 
-        if 'MA_50' in df.columns and not df['MA_50'].isna().all():
-            ax.plot(df['Date'], df['MA_50'], label='50-Day MA', color='#2ca02c', linestyle=':')
+    if df is None:
+        st.error("❌ Unable to fetch data from any source. Please check the ticker symbol and try again.")
+        return
 
-        ax.set_title(f"{ticker} Stock Price with Moving Averages")
-        ax.set_xlabel("Date")
-        ax.set_ylabel(f"Price ({currency_symbol})")
-        ax.legend()
-        st.pyplot(fig)
+    # Process the data
+    data_source = df.attrs.get('source', 'unknown')
+    df = process_stock_data(df, ticker, data_source)
 
-        # Volume chart
-        fig, ax = plt.subplots(figsize=(10, 4))
-        ax.bar(df['Date'], df['Volume'], color='skyblue', alpha=0.7)
-        ax.set_title(f"{ticker} Trading Volume")
-        ax.set_xlabel("Date")
-        ax.set_ylabel("Volume")
-        st.pyplot(fig)
+    if df is None or df.empty:
+        st.error("❌ Unable to process stock data. Please try again.")
+        return
 
-        # RSI chart
-        if 'RSI' in df.columns and not df['RSI'].isna().all():
-            fig, ax = plt.subplots(figsize=(10, 4))
-            ax.plot(df['Date'], df['RSI'], color='#d62728', linewidth=2, label="RSI")
-            ax.axhline(y=70, color='#ff7f0e', linestyle='--', label="Overbought (70)")
-            ax.axhline(y=30, color='#2ca02c', linestyle='--', label="Oversold (30)")
-            ax.set_ylim([0, 100])
-            ax.set_title(f"{ticker} RSI (Relative Strength Index)")
+    # Display data source info
+    if data_source == 'sample_data':
+        st.warning("⚠️ Using sample data for demonstration. Real-time data unavailable.")
+    else:
+        st.success(f"✅ Successfully loaded {len(df)} data points for {ticker} from {data_source}")
+
+    # Get stock info
+    stock_info = get_stock_info(ticker)
+
+    # --- Tab 1: Stock Analysis ---
+    with tab1:
+        st.markdown(f"### 📋 {stock_info['name']} ({ticker})")
+        if data_source != 'sample_data':
+            st.info(f"📡 Data Source: {data_source.title()}")
+
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            current_price = df['Close'].iloc[-1]
+            currency = stock_info.get('currency', 'USD')
+            currency_symbol = '$' if currency == 'USD' else 'INR ' if currency == 'INR' else currency
+            st.metric("Current Price", f"{currency_symbol}{current_price:.2f}")
+
+        with col2:
+            price_change = df['Close'].iloc[-1] - df['Close'].iloc[-2] if len(df) > 1 else 0
+            pct_change = (price_change / df['Close'].iloc[-2] * 100) if len(df) > 1 and df['Close'].iloc[-2] != 0 else 0
+            st.metric("Price Change", f"{currency_symbol}{price_change:.2f}", f"{pct_change:.2f}%")
+
+        with col3:
+            st.metric("Volume", f"{df['Volume'].iloc[-1]:,.0f}")
+
+        with col4:
+            volatility = df['Close'].pct_change().std() * 100
+            st.metric("Volatility", f"{volatility:.2f}%")
+
+    # --- Tab 2: Predictions ---
+    with tab2:
+        st.markdown("### 🤖 AI Predictions")
+        with st.spinner("🧠 Training ML model..."):
+            model, scaler, metrics, feature_importance = train_model(df)
+
+        if model is None:
+            st.error("Failed to train model. Please try with different parameters.")
+            return
+
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Model Accuracy (R²)", f"{metrics['test_r2']:.3f}")
+        with col2:
+            st.metric("RMSE", f"{metrics['test_rmse']:.2f}")
+        with col3:
+            st.metric("MAE", f"{metrics['test_mae']:.2f}")
+
+        # Next day prediction
+        st.markdown("### 🔮 Next Day Prediction")
+        next_day_pred = predict_next_price(model, scaler, df)
+
+        if next_day_pred:
+            current_price = df['Close'].iloc[-1]
+            price_change = next_day_pred - current_price
+            percentage_change = (price_change / current_price) * 100
+
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("Current Price", f"{currency_symbol}{current_price:.2f}")
+            with col2:
+                st.metric("Predicted Price", f"{currency_symbol}{next_day_pred:.2f}", f"{currency_symbol}{price_change:.2f}")
+            with col3:
+                st.metric("Expected Change", f"{percentage_change:.2f}%")
+
+            if percentage_change > 2:
+                st.success("🟢 Strong Bullish Signal")
+            elif percentage_change > 0:
+                st.info("🔵 Mild Bullish Signal")
+            elif percentage_change > -2:
+                st.warning("🟡 Neutral Signal")
+            else:
+                st.error("🔴 Bearish Signal")
+
+    # --- Tab 3: Stock Price Charts ---
+    with tab3:
+        st.markdown("### 📈 Stock Price Charts")
+
+        if PLOTTING_AVAILABLE:
+            # Price chart
+            fig, ax = plt.subplots(figsize=(10, 5))
+            ax.plot(df['Date'], df['Close'], label='Close Price', color='#1f77b4', linewidth=2)
+            if 'MA_20' in df.columns and not df['MA_20'].isna().all():
+                ax.plot(df['Date'], df['MA_20'], label='20-Day MA', color='#ff7f0e', linestyle='--')
+            if 'MA_50' in df.columns and not df['MA_50'].isna().all():
+                ax.plot(df['Date'], df['MA_50'], label='50-Day MA', color='#2ca02c', linestyle=':')
+            ax.set_title(f"{ticker} Stock Price with Moving Averages")
             ax.set_xlabel("Date")
-            ax.set_ylabel("RSI")
+            ax.set_ylabel(f"Price ({currency_symbol})")
             ax.legend()
             st.pyplot(fig)
-    else:
-        st.info("📊 Plotting is disabled because Matplotlib/Seaborn is not available.")
+
+            # Volume chart
+            fig, ax = plt.subplots(figsize=(10, 4))
+            ax.bar(df['Date'], df['Volume'], color='skyblue', alpha=0.7)
+            ax.set_title(f"{ticker} Trading Volume")
+            ax.set_xlabel("Date")
+            ax.set_ylabel("Volume")
+            st.pyplot(fig)
+
+            # RSI chart
+            if 'RSI' in df.columns and not df['RSI'].isna().all():
+                fig, ax = plt.subplots(figsize=(10, 4))
+                ax.plot(df['Date'], df['RSI'], color='#d62728', linewidth=2, label="RSI")
+                ax.axhline(y=70, color='#ff7f0e', linestyle='--', label="Overbought (70)")
+                ax.axhline(y=30, color='#2ca02c', linestyle='--', label="Oversold (30)")
+                ax.set_ylim([0, 100])
+                ax.set_title(f"{ticker} RSI (Relative Strength Index)")
+                ax.set_xlabel("Date")
+                ax.set_ylabel("RSI")
+                ax.legend()
+                st.pyplot(fig)
+        else:
+            st.info("📊 Plotting is disabled because Matplotlib/Seaborn is not available.")
+
 
 # Tab 4: Model Performance
 with tab4:
