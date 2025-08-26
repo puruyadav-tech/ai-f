@@ -641,37 +641,86 @@ def main():
                 st.metric("Volatility", f"{volatility:.2f}%")
 
         # --- Tab 2: Predictions ---
-        with tab2:
-            st.markdown("### 🤖 AI Predictions")
-            with st.spinner("🧠 Training ML model..."):
-                model, scaler, metrics, feature_importance = train_model(df)
+        # Fetch stock data
+    with st.spinner("🔄 Fetching stock data..."):
+        df = fetch_stock_data_unified(ticker, period=period)
 
-            if model is None:
-                st.error("Failed to train model.")
-                return
+    if df is None:
+        st.error("❌ Unable to fetch data. Check ticker symbol.")
+        return
+
+    # Process data
+    data_source = df.attrs.get('source', 'unknown')
+    df = process_stock_data(df, ticker, data_source)
+
+    if df is None or df.empty:
+        st.error("❌ Unable to process stock data.")
+        return
+
+    if data_source == 'sample_data':
+        st.warning("⚠️ Using sample data for demonstration.")
+    else:
+        st.success(f"✅ Loaded {len(df)} data points for {ticker} from {data_source}")
+
+    stock_info = get_stock_info(ticker)
+
+    # --- Tab 1: Stock Analysis ---
+    with tab1:
+        st.markdown(f"### 📋 {stock_info['name']} ({ticker})")
+        if data_source != 'sample_data':
+            st.info(f"📡 Data Source: {data_source.title()}")
+
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            current_price = df['Close'].iloc[-1]
+            currency = stock_info.get('currency', 'USD')
+            currency_symbol = '$' if currency == 'USD' else 'INR ' if currency == 'INR' else currency
+            st.metric("Current Price", f"{currency_symbol}{current_price:.2f}")
+
+        with col2:
+            price_change = df['Close'].iloc[-1] - df['Close'].iloc[-2] if len(df) > 1 else 0
+            pct_change = (price_change / df['Close'].iloc[-2] * 100) if len(df) > 1 and df['Close'].iloc[-2] != 0 else 0
+            st.metric("Price Change", f"{currency_symbol}{price_change:.2f}", f"{pct_change:.2f}%")
+
+        with col3:
+            st.metric("Volume", f"{df['Volume'].iloc[-1]:,.0f}")
+
+        with col4:
+            volatility = df['Close'].pct_change().std() * 100
+            st.metric("Volatility", f"{volatility:.2f}%")
+
+    # --- Tab 2: Predictions ---
+    with tab2:
+        st.markdown("### 🤖 AI Predictions")
+        with st.spinner("🧠 Training ML model..."):
+            model, scaler, metrics, feature_importance = train_model(df)
+
+        if model is None:
+            st.error("Failed to train model.")
+            return
+
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Model Accuracy (R²)", f"{metrics['test_r2']:.3f}")
+        with col2:
+            st.metric("RMSE", f"{metrics['test_rmse']:.2f}")
+        with col3:
+            st.metric("MAE", f"{metrics['test_mae']:.2f}")
+
+        # Next day prediction
+        next_day_pred = predict_next_price(model, scaler, df)
+        if next_day_pred:
+            current_price = df['Close'].iloc[-1]
+            price_change = next_day_pred - current_price
+            percentage_change = (price_change / current_price) * 100
 
             col1, col2, col3 = st.columns(3)
             with col1:
-                st.metric("Model Accuracy (R²)", f"{metrics['test_r2']:.3f}")
+                st.metric("Current Price", f"{currency_symbol}{current_price:.2f}")
             with col2:
-                st.metric("RMSE", f"{metrics['test_rmse']:.2f}")
+                st.metric("Predicted Price", f"{currency_symbol}{next_day_pred:.2f}", f"{currency_symbol}{price_change:.2f}")
             with col3:
-                st.metric("MAE", f"{metrics['test_mae']:.2f}")
-
-            # Next day prediction
-            next_day_pred = predict_next_price(model, scaler, df)
-            if next_day_pred:
-                current_price = df['Close'].iloc[-1]
-                price_change = next_day_pred - current_price
-                percentage_change = (price_change / current_price) * 100
-
-                col1, col2, col3 = st.columns(3)
-                with col1:
-                    st.metric("Current Price", f"{currency_symbol}{current_price:.2f}")
-                with col2:
-                    st.metric("Predicted Price", f"{currency_symbol}{next_day_pred:.2f}", f"{currency_symbol}{price_change:.2f}")
-                with col3:
-                    st.metric("Expected Change", f"{percentage_change:.2f}%")
+                st.metric("Expected Change", f"{percentage_change:.2f}%")
 
 # --- Tab 3: Stock Price Charts ---
     with tab3:
