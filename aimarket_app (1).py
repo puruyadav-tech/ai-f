@@ -583,11 +583,14 @@ def main():
             return  # ✅ inside function
 
         # Create tabs
-        tab1, tab2, tab3 = st.tabs([
-            "📊 Stock Analysis",
-            "🔮 Predictions",
-            "📈 Charts"
-        ])
+    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    "📊 Stock Analysis",
+    "🔮 Predictions",
+    "📈 Charts",
+    "🤖 Model Performance",
+    "📋 Data Table"
+])
+
 
         # Fetch stock data
         with st.spinner("🔄 Fetching stock data..."):
