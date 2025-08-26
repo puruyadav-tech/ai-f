@@ -4,8 +4,13 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
+try:
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+    PLOTTING_AVAILABLE = True
+except ModuleNotFoundError:
+    st.warning("Matplotlib or Seaborn is not installed. Plots will not be displayed.")
+    PLOTTING_AVAILABLE = False
 from datetime import datetime, timedelta
 import requests
 import time
@@ -707,46 +712,62 @@ def main():
                 else:
                     st.error("🔴 Bearish Signal")
 
+
+
+# Try to import plotting libraries
+try:
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+    PLOTTING_AVAILABLE = True
+except ModuleNotFoundError:
+    st.warning("Matplotlib or Seaborn is not installed. Plots will not be displayed.")
+    PLOTTING_AVAILABLE = False
+
+# Tab 3: Stock Price Charts
 with tab3:
     st.markdown("### 📈 Stock Price Charts")
 
-    # Price chart with moving averages
-    fig, ax = plt.subplots(figsize=(10, 5))
-    ax.plot(df['Date'], df['Close'], label='Close Price', color='#1f77b4', linewidth=2)
+    if PLOTTING_AVAILABLE:
+        # Price chart with moving averages
+        fig, ax = plt.subplots(figsize=(10, 5))
+        ax.plot(df['Date'], df['Close'], label='Close Price', color='#1f77b4', linewidth=2)
 
-    if 'MA_20' in df.columns and not df['MA_20'].isna().all():
-        ax.plot(df['Date'], df['MA_20'], label='20-Day MA', color='#ff7f0e', linestyle='--')
+        if 'MA_20' in df.columns and not df['MA_20'].isna().all():
+            ax.plot(df['Date'], df['MA_20'], label='20-Day MA', color='#ff7f0e', linestyle='--')
 
-    if 'MA_50' in df.columns and not df['MA_50'].isna().all():
-        ax.plot(df['Date'], df['MA_50'], label='50-Day MA', color='#2ca02c', linestyle=':')
+        if 'MA_50' in df.columns and not df['MA_50'].isna().all():
+            ax.plot(df['Date'], df['MA_50'], label='50-Day MA', color='#2ca02c', linestyle=':')
 
-    ax.set_title(f"{ticker} Stock Price with Moving Averages")
-    ax.set_xlabel("Date")
-    ax.set_ylabel(f"Price ({currency_symbol})")
-    ax.legend()
-    st.pyplot(fig)
-
-    # Volume chart
-    fig, ax = plt.subplots(figsize=(10, 4))
-    ax.bar(df['Date'], df['Volume'], color='skyblue', alpha=0.7)
-    ax.set_title(f"{ticker} Trading Volume")
-    ax.set_xlabel("Date")
-    ax.set_ylabel("Volume")
-    st.pyplot(fig)
-
-    # RSI chart
-    if 'RSI' in df.columns and not df['RSI'].isna().all():
-        fig, ax = plt.subplots(figsize=(10, 4))
-        ax.plot(df['Date'], df['RSI'], color='#d62728', linewidth=2, label="RSI")
-        ax.axhline(y=70, color='#ff7f0e', linestyle='--', label="Overbought (70)")
-        ax.axhline(y=30, color='#2ca02c', linestyle='--', label="Oversold (30)")
-        ax.set_ylim([0, 100])
-        ax.set_title(f"{ticker} RSI (Relative Strength Index)")
+        ax.set_title(f"{ticker} Stock Price with Moving Averages")
         ax.set_xlabel("Date")
-        ax.set_ylabel("RSI")
+        ax.set_ylabel(f"Price ({currency_symbol})")
         ax.legend()
         st.pyplot(fig)
 
+        # Volume chart
+        fig, ax = plt.subplots(figsize=(10, 4))
+        ax.bar(df['Date'], df['Volume'], color='skyblue', alpha=0.7)
+        ax.set_title(f"{ticker} Trading Volume")
+        ax.set_xlabel("Date")
+        ax.set_ylabel("Volume")
+        st.pyplot(fig)
+
+        # RSI chart
+        if 'RSI' in df.columns and not df['RSI'].isna().all():
+            fig, ax = plt.subplots(figsize=(10, 4))
+            ax.plot(df['Date'], df['RSI'], color='#d62728', linewidth=2, label="RSI")
+            ax.axhline(y=70, color='#ff7f0e', linestyle='--', label="Overbought (70)")
+            ax.axhline(y=30, color='#2ca02c', linestyle='--', label="Oversold (30)")
+            ax.set_ylim([0, 100])
+            ax.set_title(f"{ticker} RSI (Relative Strength Index)")
+            ax.set_xlabel("Date")
+            ax.set_ylabel("RSI")
+            ax.legend()
+            st.pyplot(fig)
+    else:
+        st.info("📊 Plotting is disabled because Matplotlib/Seaborn is not available.")
+
+# Tab 4: Model Performance
 with tab4:
     if model is not None:
         st.markdown("### 🤖 Model Performance Details")
@@ -781,17 +802,20 @@ with tab4:
         # Feature importance
         if feature_importance is not None and not feature_importance.empty:
             st.markdown("### 🎯 Feature Importance")
+            if PLOTTING_AVAILABLE:
+                fig, ax = plt.subplots(figsize=(8, 6))
+                sns.barplot(
+                    data=feature_importance.head(10),
+                    x='importance',
+                    y='feature',
+                    palette='viridis',
+                    ax=ax
+                )
+                ax.set_title("Top 10 Most Important Features")
+                st.pyplot(fig)
+            else:
+                st.info("📊 Feature importance plotting is disabled because Matplotlib/Seaborn is not available.")
 
-            fig, ax = plt.subplots(figsize=(8, 6))
-            sns.barplot(
-                data=feature_importance.head(10),
-                x='importance',
-                y='feature',
-                palette='viridis',
-                ax=ax
-            )
-            ax.set_title("Top 10 Most Important Features")
-            st.pyplot(fig)
 
         with tab5:
             # Data table
