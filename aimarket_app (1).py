@@ -715,153 +715,91 @@ def main():
                 else:
                     st.error("🔴 Bearish Signal")
 
-        with tab3:
-            # Charts and visualizations
-            st.markdown("### 📈 Stock Price Charts")
+with tab3:
+    st.markdown("### 📈 Stock Price Charts")
 
-            # Price chart with moving averages
-            fig = go.Figure()
+    # Price chart with moving averages
+    fig, ax = plt.subplots(figsize=(10, 5))
+    ax.plot(df['Date'], df['Close'], label='Close Price', color='#1f77b4', linewidth=2)
 
-            fig.add_trace(go.Scatter(
-                x=df['Date'],
-                y=df['Close'],
-                mode='lines',
-                name='Close Price',
-                line=dict(color='#1f77b4', width=3)
-            ))
+    if 'MA_20' in df.columns and not df['MA_20'].isna().all():
+        ax.plot(df['Date'], df['MA_20'], label='20-Day MA', color='#ff7f0e', linestyle='--')
 
-            if 'MA_20' in df.columns and not df['MA_20'].isna().all():
-                fig.add_trace(go.Scatter(
-                    x=df['Date'],
-                    y=df['MA_20'],
-                    mode='lines',
-                    name='20-Day MA',
-                    line=dict(color='#ff7f0e', width=2, dash='dash')
-                ))
+    if 'MA_50' in df.columns and not df['MA_50'].isna().all():
+        ax.plot(df['Date'], df['MA_50'], label='50-Day MA', color='#2ca02c', linestyle=':')
 
-            if 'MA_50' in df.columns and not df['MA_50'].isna().all():
-                fig.add_trace(go.Scatter(
-                    x=df['Date'],
-                    y=df['MA_50'],
-                    mode='lines',
-                    name='50-Day MA',
-                    line=dict(color='#2ca02c', width=2, dash='dot')
-                ))
+    ax.set_title(f"{ticker} Stock Price with Moving Averages")
+    ax.set_xlabel("Date")
+    ax.set_ylabel(f"Price ({currency_symbol})")
+    ax.legend()
+    st.pyplot(fig)
 
-            fig.update_layout(
-                title=f"{ticker} Stock Price with Moving Averages",
-                xaxis_title="Date",
-                yaxis_title=f"Price ({currency_symbol})",
-                hovermode='x unified',
-                template='plotly_white'
+    # Volume chart
+    fig, ax = plt.subplots(figsize=(10, 4))
+    ax.bar(df['Date'], df['Volume'], color='skyblue', alpha=0.7)
+    ax.set_title(f"{ticker} Trading Volume")
+    ax.set_xlabel("Date")
+    ax.set_ylabel("Volume")
+    st.pyplot(fig)
+
+    # RSI chart
+    if 'RSI' in df.columns and not df['RSI'].isna().all():
+        fig, ax = plt.subplots(figsize=(10, 4))
+        ax.plot(df['Date'], df['RSI'], color='#d62728', linewidth=2, label="RSI")
+        ax.axhline(y=70, color='#ff7f0e', linestyle='--', label="Overbought (70)")
+        ax.axhline(y=30, color='#2ca02c', linestyle='--', label="Oversold (30)")
+        ax.set_ylim([0, 100])
+        ax.set_title(f"{ticker} RSI (Relative Strength Index)")
+        ax.set_xlabel("Date")
+        ax.set_ylabel("RSI")
+        ax.legend()
+        st.pyplot(fig)
+
+with tab4:
+    if model is not None:
+        st.markdown("### 🤖 Model Performance Details")
+
+        # Performance metrics
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("**🎯 Training Metrics:**")
+            st.write(f"- RMSE: {metrics['train_rmse']:.4f}")
+            st.write(f"- MAE: {metrics['train_mae']:.4f}")
+            st.write(f"- R² Score: {metrics['train_r2']:.4f}")
+            st.write(f"- Sample Size: {metrics['train_size']}")
+
+        with col2:
+            st.markdown("**📊 Testing Metrics:**")
+            st.write(f"- RMSE: {metrics['test_rmse']:.4f}")
+            st.write(f"- MAE: {metrics['test_mae']:.4f}")
+            st.write(f"- R² Score: {metrics['test_r2']:.4f}")
+            st.write(f"- Sample Size: {metrics['test_size']}")
+
+        # Model interpretation
+        st.markdown("### 🎯 Model Interpretation")
+        if metrics['test_r2'] > 0.8:
+            st.success("🎯 Excellent model performance! High accuracy predictions.")
+        elif metrics['test_r2'] > 0.6:
+            st.info("👍 Good model performance. Reliable predictions.")
+        elif metrics['test_r2'] > 0.4:
+            st.warning("⚠️ Moderate model performance. Use predictions with caution.")
+        else:
+            st.error("❌ Poor model performance. Predictions may be unreliable.")
+
+        # Feature importance
+        if feature_importance is not None and not feature_importance.empty:
+            st.markdown("### 🎯 Feature Importance")
+
+            fig, ax = plt.subplots(figsize=(8, 6))
+            sns.barplot(
+                data=feature_importance.head(10),
+                x='importance',
+                y='feature',
+                palette='viridis',
+                ax=ax
             )
-
-            st.plotly_chart(fig, use_container_width=True)
-
-            # Volume chart
-            fig_volume = go.Figure()
-            fig_volume.add_trace(go.Bar(
-                x=df['Date'],
-                y=df['Volume'],
-                name='Volume',
-                marker_color='rgba(31, 119, 180, 0.6)'
-            ))
-
-            fig_volume.update_layout(
-                title=f"{ticker} Trading Volume",
-                xaxis_title="Date",
-                yaxis_title="Volume",
-                template='plotly_white'
-            )
-
-            st.plotly_chart(fig_volume, use_container_width=True)
-
-            # RSI chart
-            if 'RSI' in df.columns and not df['RSI'].isna().all():
-                fig_rsi = go.Figure()
-                fig_rsi.add_trace(go.Scatter(
-                    x=df['Date'],
-                    y=df['RSI'],
-                    mode='lines',
-                    name='RSI',
-                    line=dict(color='#d62728', width=3)
-                ))
-
-                # Add overbought/oversold lines
-                fig_rsi.add_hline(y=70, line_dash="dash", line_color="#ff7f0e", annotation_text="Overbought (70)")
-                fig_rsi.add_hline(y=30, line_dash="dash", line_color="#2ca02c", annotation_text="Oversold (30)")
-
-                fig_rsi.update_layout(
-                    title=f"{ticker} RSI (Relative Strength Index)",
-                    xaxis_title="Date",
-                    yaxis_title="RSI",
-                    yaxis=dict(range=[0, 100]),
-                    template='plotly_white'
-                )
-
-                st.plotly_chart(fig_rsi, use_container_width=True)
-
-        with tab4:
-            # Model performance details
-            if model is not None:
-                st.markdown("### 🤖 Model Performance Details")
-
-                # Performance metrics
-                col1, col2 = st.columns(2)
-
-                with col1:
-                    st.markdown("**🎯 Training Metrics:**")
-                    st.write(f"- RMSE: {metrics['train_rmse']:.4f}")
-                    st.write(f"- MAE: {metrics['train_mae']:.4f}")
-                    st.write(f"- R² Score: {metrics['train_r2']:.4f}")
-                    st.write(f"- Sample Size: {metrics['train_size']}")
-
-                with col2:
-                    st.markdown("**📊 Testing Metrics:**")
-                    st.write(f"- RMSE: {metrics['test_rmse']:.4f}")
-                    st.write(f"- MAE: {metrics['test_mae']:.4f}")
-                    st.write(f"- R² Score: {metrics['test_r2']:.4f}")
-                    st.write(f"- Sample Size: {metrics['test_size']}")
-
-                # Model interpretation
-                st.markdown("### 🎯 Model Interpretation")
-                if metrics['test_r2'] > 0.8:
-                    st.success("🎯 Excellent model performance! High accuracy predictions.")
-                elif metrics['test_r2'] > 0.6:
-                    st.info("👍 Good model performance. Reliable predictions.")
-                elif metrics['test_r2'] > 0.4:
-                    st.warning("⚠️ Moderate model performance. Use predictions with caution.")
-                else:
-                    st.error("❌ Poor model performance. Predictions may be unreliable.")
-
-                # Feature importance
-                if feature_importance is not None and not feature_importance.empty:
-                    st.markdown("### 🎯 Feature Importance")
-
-                    fig_importance = px.bar(
-                        feature_importance.head(10),
-                        x='importance',
-                        y='feature',
-                        orientation='h',
-                        title="Top 10 Most Important Features",
-                        color='importance',
-                        color_continuous_scale='viridis',
-                        template='plotly_white'
-                    )
-                    fig_importance.update_layout(
-                        yaxis={'categoryorder':'total ascending'}
-                    )
-                    st.plotly_chart(fig_importance, use_container_width=True)
-
-                    # Feature explanation
-                    st.info("""
-                    **📋 Feature Importance Explanation:**
-                    - **Close_Lag_X**: Previous day closing prices
-                    - **MA_X**: Moving averages (trend indicators)
-                    - **RSI**: Relative Strength Index (momentum indicator)
-                    - **Volume**: Trading volume
-                    - **Price_Change**: Recent price change percentage
-                    """)
+            ax.set_title("Top 10 Most Important Features")
+            st.pyplot(fig)
 
         with tab5:
             # Data table
