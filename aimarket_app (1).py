@@ -592,9 +592,10 @@ def main():
 ])
 
 
-        # Fetch stock data
-        with st.spinner("🔄 Fetching stock data..."):
-            df = fetch_stock_data_unified(ticker, period=period)
+          # API Status Check
+    with st.expander("🔍 API Status Check", expanded=False):
+        if st.button("🔄 Test API Connections", type="primary"):
+            with st.spinner("Testing API connections..."):
 
         if df is None:
             st.error("❌ Unable to fetch data. Check ticker symbol.")
