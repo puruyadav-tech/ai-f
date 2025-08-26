@@ -562,6 +562,8 @@ def main():
 
     # Main content area
     # Try to import plotting libraries
+import streamlit as st
+
 def main():
     ticker = st.text_input("Enter Stock Ticker")
     predict_button = st.button("Predict")
@@ -574,116 +576,101 @@ def main():
     except ModuleNotFoundError:
         st.warning("Matplotlib or Seaborn is not installed. Plots will not be displayed.")
         PLOTTING_AVAILABLE = False
-# Main content area
-if predict_button:
-    if not ticker:
-        st.error("Please enter a stock ticker symbol!")
-        return
 
-    # Create tabs for different views
-    tab1, tab2, tab3, tab4, tab5 = st.tabs([
-        "📊 Stock Analysis",
-        "🔮 Predictions",
-        "📈 Charts",
-        "🤖 Model Performance",
-        "📋 Data Table"
-    ])
+    if predict_button:
+        if not ticker:
+            st.error("Please enter a stock ticker symbol!")
+            return  # ✅ inside function
 
-    # Fetch stock data
-    with st.spinner("🔄 Fetching stock data from multiple sources..."):
-        df = fetch_stock_data_unified(ticker, period=period)
+        # Create tabs
+        tab1, tab2, tab3 = st.tabs([
+            "📊 Stock Analysis",
+            "🔮 Predictions",
+            "📈 Charts"
+        ])
 
-    if df is None:
-        st.error("❌ Unable to fetch data from any source. Please check the ticker symbol and try again.")
-        return
+        # Fetch stock data
+        with st.spinner("🔄 Fetching stock data..."):
+            df = fetch_stock_data_unified(ticker, period=period)
 
-    # Process the data
-    data_source = df.attrs.get('source', 'unknown')
-    df = process_stock_data(df, ticker, data_source)
-
-    if df is None or df.empty:
-        st.error("❌ Unable to process stock data. Please try again.")
-        return
-
-    # Display data source info
-    if data_source == 'sample_data':
-        st.warning("⚠️ Using sample data for demonstration. Real-time data unavailable.")
-    else:
-        st.success(f"✅ Successfully loaded {len(df)} data points for {ticker} from {data_source}")
-
-    # Get stock info
-    stock_info = get_stock_info(ticker)
-
-    # --- Tab 1: Stock Analysis ---
-    with tab1:
-        st.markdown(f"### 📋 {stock_info['name']} ({ticker})")
-        if data_source != 'sample_data':
-            st.info(f"📡 Data Source: {data_source.title()}")
-
-        col1, col2, col3, col4 = st.columns(4)
-        with col1:
-            current_price = df['Close'].iloc[-1]
-            currency = stock_info.get('currency', 'USD')
-            currency_symbol = '$' if currency == 'USD' else 'INR ' if currency == 'INR' else currency
-            st.metric("Current Price", f"{currency_symbol}{current_price:.2f}")
-
-        with col2:
-            price_change = df['Close'].iloc[-1] - df['Close'].iloc[-2] if len(df) > 1 else 0
-            pct_change = (price_change / df['Close'].iloc[-2] * 100) if len(df) > 1 and df['Close'].iloc[-2] != 0 else 0
-            st.metric("Price Change", f"{currency_symbol}{price_change:.2f}", f"{pct_change:.2f}%")
-
-        with col3:
-            st.metric("Volume", f"{df['Volume'].iloc[-1]:,.0f}")
-
-        with col4:
-            volatility = df['Close'].pct_change().std() * 100
-            st.metric("Volatility", f"{volatility:.2f}%")
-
-    # --- Tab 2: Predictions ---
-    with tab2:
-        st.markdown("### 🤖 AI Predictions")
-        with st.spinner("🧠 Training ML model..."):
-            model, scaler, metrics, feature_importance = train_model(df)
-
-        if model is None:
-            st.error("Failed to train model. Please try with different parameters.")
+        if df is None:
+            st.error("❌ Unable to fetch data. Check ticker symbol.")
             return
 
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            st.metric("Model Accuracy (R²)", f"{metrics['test_r2']:.3f}")
-        with col2:
-            st.metric("RMSE", f"{metrics['test_rmse']:.2f}")
-        with col3:
-            st.metric("MAE", f"{metrics['test_mae']:.2f}")
+        # Process data
+        data_source = df.attrs.get('source', 'unknown')
+        df = process_stock_data(df, ticker, data_source)
 
-        # Next day prediction
-        st.markdown("### 🔮 Next Day Prediction")
-        next_day_pred = predict_next_price(model, scaler, df)
+        if df is None or df.empty:
+            st.error("❌ Unable to process stock data.")
+            return
 
-        if next_day_pred:
-            current_price = df['Close'].iloc[-1]
-            price_change = next_day_pred - current_price
-            percentage_change = (price_change / current_price) * 100
+        if data_source == 'sample_data':
+            st.warning("⚠️ Using sample data for demonstration.")
+        else:
+            st.success(f"✅ Loaded {len(df)} data points for {ticker} from {data_source}")
+
+        stock_info = get_stock_info(ticker)
+
+        # --- Tab 1: Stock Analysis ---
+        with tab1:
+            st.markdown(f"### 📋 {stock_info['name']} ({ticker})")
+            if data_source != 'sample_data':
+                st.info(f"📡 Data Source: {data_source.title()}")
+
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                current_price = df['Close'].iloc[-1]
+                currency = stock_info.get('currency', 'USD')
+                currency_symbol = '$' if currency == 'USD' else 'INR ' if currency == 'INR' else currency
+                st.metric("Current Price", f"{currency_symbol}{current_price:.2f}")
+
+            with col2:
+                price_change = df['Close'].iloc[-1] - df['Close'].iloc[-2] if len(df) > 1 else 0
+                pct_change = (price_change / df['Close'].iloc[-2] * 100) if len(df) > 1 and df['Close'].iloc[-2] != 0 else 0
+                st.metric("Price Change", f"{currency_symbol}{price_change:.2f}", f"{pct_change:.2f}%")
+
+            with col3:
+                st.metric("Volume", f"{df['Volume'].iloc[-1]:,.0f}")
+
+            with col4:
+                volatility = df['Close'].pct_change().std() * 100
+                st.metric("Volatility", f"{volatility:.2f}%")
+
+        # --- Tab 2: Predictions ---
+        with tab2:
+            st.markdown("### 🤖 AI Predictions")
+            with st.spinner("🧠 Training ML model..."):
+                model, scaler, metrics, feature_importance = train_model(df)
+
+            if model is None:
+                st.error("Failed to train model.")
+                return
 
             col1, col2, col3 = st.columns(3)
             with col1:
-                st.metric("Current Price", f"{currency_symbol}{current_price:.2f}")
+                st.metric("Model Accuracy (R²)", f"{metrics['test_r2']:.3f}")
             with col2:
-                st.metric("Predicted Price", f"{currency_symbol}{next_day_pred:.2f}", f"{currency_symbol}{price_change:.2f}")
+                st.metric("RMSE", f"{metrics['test_rmse']:.2f}")
             with col3:
-                st.metric("Expected Change", f"{percentage_change:.2f}%")
+                st.metric("MAE", f"{metrics['test_mae']:.2f}")
 
-            if percentage_change > 2:
-                st.success("🟢 Strong Bullish Signal")
-            elif percentage_change > 0:
-                st.info("🔵 Mild Bullish Signal")
-            elif percentage_change > -2:
-                st.warning("🟡 Neutral Signal")
-            else:
-                st.error("🔴 Bearish Signal")
+            # Next day prediction
+            next_day_pred = predict_next_price(model, scaler, df)
+            if next_day_pred:
+                current_price = df['Close'].iloc[-1]
+                price_change = next_day_pred - current_price
+                percentage_change = (price_change / current_price) * 100
 
-    # --- Tab 3: Stock Price Charts ---
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.metric("Current Price", f"{currency_symbol}{current_price:.2f}")
+                with col2:
+                    st.metric("Predicted Price", f"{currency_symbol}{next_day_pred:.2f}", f"{currency_symbol}{price_change:.2f}")
+                with col3:
+                    st.metric("Expected Change", f"{percentage_change:.2f}%")
+
+# --- Tab 3: Stock Price Charts ---
     with tab3:
         st.markdown("### 📈 Stock Price Charts")
 
