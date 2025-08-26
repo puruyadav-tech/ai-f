@@ -1,11 +1,15 @@
 streamlit
 pandas
 numpy
-plotly
-scikit-learn
 yfinance
+scikit-learn
+joblib
+plotly
+matplotlib
 requests
-
+timeseries
+alpha_vantage
+python-dotenv
 
 
 
