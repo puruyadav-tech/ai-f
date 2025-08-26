@@ -562,14 +562,18 @@ def main():
 
     # Main content area
     # Try to import plotting libraries
-try:
-    import matplotlib.pyplot as plt
-    import seaborn as sns
-    PLOTTING_AVAILABLE = True
-except ModuleNotFoundError:
-    st.warning("Matplotlib or Seaborn is not installed. Plots will not be displayed.")
-    PLOTTING_AVAILABLE = False
+def main():
+    ticker = st.text_input("Enter Stock Ticker")
+    predict_button = st.button("Predict")
 
+    # Try to import plotting libraries
+    try:
+        import matplotlib.pyplot as plt
+        import seaborn as sns
+        PLOTTING_AVAILABLE = True
+    except ModuleNotFoundError:
+        st.warning("Matplotlib or Seaborn is not installed. Plots will not be displayed.")
+        PLOTTING_AVAILABLE = False
 # Main content area
 if predict_button:
     if not ticker:
